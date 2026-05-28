@@ -66,9 +66,9 @@ jobs:
           echo "daily: $DAILY_STATUS $DAILY_TIME"
           echo "weekly: $WEEKLY_STATUS $WEEKLY_TIME"
 
-          # 更新 README 面板（用 # 作分隔符避免和表格 | 冲突）
-          sed -i "s#^| 日常签到 (daily) |.*|.*|.*|$#| 日常签到 (daily) | $DAILY_KV | $DAILY_TIME | $DAILY_STATUS |#" README.md
-          sed -i "s#^| 周常任务 (weekly) |.*|.*|.*|$#| 周常任务 (weekly) | $WEEKLY_KV | $WEEKLY_TIME | $WEEKLY_STATUS |#" README.md
+          # 更新 README 面板（用 c 命令替换整行）
+          sed -i "/^| 日常签到 (daily)/c\\| 日常签到 (daily) | $DAILY_KV | $DAILY_TIME | $DAILY_STATUS |" README.md
+          sed -i "/^| 周常任务 (weekly)/c\\| 周常任务 (weekly) | $WEEKLY_KV | $WEEKLY_TIME | $WEEKLY_STATUS |" README.md
 
       - name: Commit and push if changed
         run: |
