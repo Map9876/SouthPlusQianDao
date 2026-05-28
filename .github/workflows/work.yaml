@@ -8,38 +8,72 @@ on:
 jobs:
   run-script:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Run PowerShell Script
+      - name: Run and Update Panel
         id: run-script
-        shell: pwsh
+        shell: bash
         env:
           MYPWD: ${{ secrets.PWD }}
           COOKIE: ${{ secrets.COOKIE }}
           UA: ${{ secrets.UA }}
         run: |
-          $myPwd = $env:MYPWD
-          $cookie = $env:COOKIE
-          $ua = $env:UA
-          $beijingTime = [DateTimeOffset]::UtcNow.ToOffset([TimeSpan]::FromHours(8)).ToString("yyyy-MM-dd HH:mm:ss")
-          Write-Output "$beijingTime"
-          
-          # 构建URL
-          $url = "https://southplus-qiandao.hhdheuwjbgg.workers.dev/?pwd=$myPwd&cookie=$cookie&ua=$ua"
-          
-          try {
-              # 发送GET请求
-              $response = Invoke-WebRequest -Uri $url -Method Get
-          
-              Write-Output $response.StatusCode
-              Write-Output $response.Content
-              
-              # 检查状态码
-              if ($response.StatusCode -notin 200,202) {
-                  exit 1
-              }
-          } catch {
-              # 捕获异常并忽略
-          }
+          BEIJING_TIME=$(TZ=Asia/Shanghai date "+%Y-%m-%d %H:%M:%S")
+          echo "$BEIJING_TIME"
+
+          # 发送签到请求
+          URL="https://southplus-qiandao.hhdheuwjbgg.workers.dev/?pwd=${MYPWD}&cookie=${COOKIE}&ua=${UA}"
+          RESP=$(curl -s -m 30 "$URL" || true)
+          echo "Response: $RESP"
+
+          # 解析状态
+          NOW=$(TZ=Asia/Shanghai date "+%Y-%m-%d %H:%M:%S")
+
+          # 日常签到状态
+          if echo "$RESP" | grep -q "全部成功"; then
+            DAILY_STATUS="已签到"
+            DAILY_TIME="$NOW"
+            DAILY_KV="已更新"
+          elif echo "$RESP" | grep -q "日常未满18小时"; then
+            DAILY_STATUS="冷却中"
+            DAILY_TIME="距上次未满18h"
+            DAILY_KV="跳过"
+          else
+            DAILY_STATUS="失败"
+            DAILY_TIME="$NOW"
+            DAILY_KV="异常"
+          fi
+
+          # 周常任务状态
+          if echo "$RESP" | grep -q "全部成功"; then
+            WEEKLY_STATUS="已签到"
+            WEEKLY_TIME="$NOW"
+            WEEKLY_KV="已更新"
+          elif echo "$RESP" | grep -q "周常未满158小时"; then
+            WEEKLY_STATUS="冷却中"
+            WEEKLY_TIME="距上次未满158h"
+            WEEKLY_KV="跳过"
+          else
+            WEEKLY_STATUS="失败"
+            WEEKLY_TIME="$NOW"
+            WEEKLY_KV="异常"
+          fi
+
+          echo "daily: $DAILY_STATUS $DAILY_TIME"
+          echo "weekly: $WEEKLY_STATUS $WEEKLY_TIME"
+
+          # 更新 README 面板
+          sed -i "s|^| 日常签到 (daily) |.*|.*|.*|$| 日常签到 (daily) | $DAILY_KV | $DAILY_TIME | $DAILY_STATUS |" README.md
+          sed -i "s|^| 周常任务 (weekly) |.*|.*|.*|$| 周常任务 (weekly) | $WEEKLY_KV | $WEEKLY_TIME | $WEEKLY_STATUS |" README.md
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --cached --quiet || git commit -m "chore: update check-in panel [skip ci]"
+          git push

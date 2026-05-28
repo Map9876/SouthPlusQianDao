@@ -1,0 +1,7 @@
+name = "southplus-qiandao"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "QIANDAO_BINDING"
+id = "fdd7ecea3b94474d8fec9e9ab5b6616d"
