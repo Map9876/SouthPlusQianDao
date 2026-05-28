@@ -27,7 +27,7 @@ jobs:
           Write-Output "$beijingTime"
           
           # 构建URL
-          $url = "https://south-plus.poker-sang.workers.dev/?pwd=$myPwd&cookie=$cookie&ua=$ua"
+          $url = "https://southplus-qiandao.hhdheuwjbgg.workers.dev/?pwd=$myPwd&cookie=$cookie&ua=$ua"
           
           try {
               # 发送GET请求
